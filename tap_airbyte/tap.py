@@ -163,6 +163,16 @@ class TapAirbyte(Tap):
                 " documentation"
             ),
         ),
+        th.Property(
+            "override_dependencies",
+            th.ArrayType(th.StringType),
+            required=False,
+            default=[],
+            description=(
+                "Override or add some dependencies to be installed in the sub-venv, if the source"
+                " is available as a native python package"
+            ),
+        ),
     ).to_dict()
     airbyte_mount_dir: str = os.getenv("AIRBYTE_MOUNT_DIR", "/tmp")
     pipe_status = None
@@ -319,8 +329,11 @@ class TapAirbyte(Tap):
                 stdout=subprocess.PIPE,
             )
         if not (self.venv / "bin" / self.source_name).exists():
+            additional_deps = self.config.get("override_dependencies", [])
+            if len(additional_deps) > 0:
+                self.logger.info(f"Native Airbyte source package: Overload some dependencies: {','.join(additional_deps)}")
             subprocess.run(
-                [self.venv / "bin" / "pip", "install", self._get_requirement_string()],
+                [self.venv / "bin" / "pip", "install", self._get_requirement_string()] + additional_deps,
                 check=True,
                 stdout=subprocess.PIPE,
             )
